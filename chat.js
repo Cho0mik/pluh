@@ -26,6 +26,7 @@ const loginTokenInput = document.getElementById("loginToken");
 const loginButton = document.getElementById("loginButton");
 const sendButton = document.getElementById("sendButton");
 const messageInput = document.getElementById("messageInput");
+const imageInput = document.getElementById("imageInput");
 const logoutButton = document.getElementById("logoutButton");
 const backButton = document.getElementById("backButton");
 const chatContainer = document.getElementById("chat");
@@ -50,7 +51,6 @@ let currentChannel = "";
 loginButton.addEventListener("click", () => {
   const token = loginTokenInput.value;
   if (validTokens.includes(token)) {
-    // Simulate Firebase login (anonymous in this case)
     signInAnonymously(auth)
       .then(() => {
         currentUser = token;
@@ -94,18 +94,26 @@ backButton.addEventListener("click", () => {
   chatContainer.innerHTML = ""; // Clear messages
 });
 
-// Send message to Firebase
+// Send message (Text + Image)
 sendButton.addEventListener("click", () => {
-  const message = messageInput.value;
-  if (message && currentUser && currentChannel) {
+  const text = messageInput.value;
+  const imageUrl = imageInput.value;
+  const uniqueId = Math.random().toString(36).substr(2, 9);  // Random unique ID for each message
+  
+  if (text || imageUrl) {
     const messagesRef = ref(db, `channels/${currentChannel}/messages/`);
     const newMessageRef = push(messagesRef);
+    
     set(newMessageRef, {
+      messageId: uniqueId,
       username: currentUser,
-      text: message,
+      text: text || null,
+      imageUrl: imageUrl || null,
       profilePic: profilePicUrl
     });
+    
     messageInput.value = ''; // Clear the input
+    imageInput.value = '';  // Clear image URL input
   }
 });
 
@@ -116,11 +124,29 @@ function displayMessages() {
   onChildAdded(messagesRef, (snapshot) => {
     const message = snapshot.val();
     const messageElement = document.createElement("div");
+    messageElement.classList.add("message-container");
+
     const profilePicElement = document.createElement("img");
     profilePicElement.src = message.profilePic;
     profilePicElement.className = "profile-pic";
     messageElement.appendChild(profilePicElement);
-    messageElement.appendChild(document.createTextNode(`${message.username}: ${message.text}`));
+    
+    // Display image if available
+    if (message.imageUrl) {
+      const imageElement = document.createElement("img");
+      imageElement.src = message.imageUrl;
+      imageElement.style.maxWidth = "300px";
+      messageElement.appendChild(imageElement);
+    }
+
+    // Display text message
+    if (message.text) {
+      const messageText = document.createElement("div");
+      messageText.classList.add("message-content");
+      messageText.textContent = `${message.username}: ${message.text}`;
+      messageElement.appendChild(messageText);
+    }
+
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll to the bottom
   });
